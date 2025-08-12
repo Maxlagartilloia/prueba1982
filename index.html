@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pedido - VALÚ Chocobananas</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #FFFDE7; /* Light cream background */
+        }
+        
+        /* Brand Colors */
+        .brand-orange { color: #E65100; }
+        .bg-brand-orange { background-color: #F57C00; }
+        .hover\:bg-brand-orange-dark:hover { background-color: #E65100; }
+        .border-brand-orange { border-color: #F57C00; }
+        .ring-brand-orange:focus { --tw-ring-color: #F57C00; }
+
+        .brand-brown { color: #3D2B1F; }
+        .bg-brand-brown { background-color: #3D2B1F; }
+        .hover\:bg-brand-brown-dark:hover { background-color: #2a1d15; }
+
+        /* Progress Bar Styling */
+        .progress-step {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            background-color: #E0E0E0; /* Gray for inactive */
+            color: #9E9E9E;
+        }
+        .progress-step.active {
+            background-color: #F57C00; /* Orange for active */
+            color: white;
+        }
+        .progress-step.completed {
+            background-color: #2E7D32; /* Green for completed */
+            color: white;
+        }
+        .progress-line {
+            height: 2px;
+            background-color: #E0E0E0;
+            flex-grow: 1;
+            margin: 0 8px;
+        }
+        .progress-line.active {
+            background-color: #F57C00;
+        }
+        
+        /* Floating Cart Button */
+        #cart-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        /* Game Styles */
+        #game-canvas {
+            background: linear-gradient(to bottom, #87CEEB 0%, #FFF3E0 100%);
+            border: 4px solid #3D2B1F;
+            border-radius: 8px;
+            width: 100%;
+            touch-action: none; /* Prevents zoom on double tap */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="app-container" class="container mx-auto max-w-2xl p-4 min-h-screen flex flex-col">
+        
+        <!-- Header -->
+        <header class="text-center py-4 flex justify-center items-center">
+            <img src="https://i.postimg.cc/g2kc4504/305490667-575197724237113-2468008211469284987-n-removebg-preview-1.webp" alt="Logo VALÚ Chocobananas" class="h-64">
+        </header>
+
+        <!-- Progress Bar -->
+        <div id="progress-bar" class="flex items-center justify-center my-6">
+            <!-- Steps will be inserted here by JavaScript -->
+        </div>
+
+        <main class="flex-grow pb-24"> <!-- Padding bottom for cart button -->
+            <!-- Page: Scan QR (Instructions) -->
+            <div id="page-scan" class="page text-center hidden">
+                <div class="bg-white p-8 rounded-2xl shadow-lg">
+                    <i class="fas fa-qrcode text-7xl brand-orange mb-6"></i>
+                    <h2 class="text-2xl font-bold brand-brown mb-2">Escanea el Código QR</h2>
+                    <p class="text-gray-600 mb-6">Por favor, escanea el código QR que se encuentra en tu mesa para poder iniciar tu pedido.</p>
+                    <div class="bg-orange-100 border-l-4 border-brand-orange text-orange-700 p-4 rounded-lg text-left">
+                        <p class="font-bold">¿Cómo ordenar?</p>
+                        <p>Asegúrate de que la dirección en tu navegador termine con `/?table=N`, donde `N` es tu número de mesa.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Choose Flavor -->
+            <div id="page-menu" class="page hidden">
+                <div class="text-center mb-6 bg-white p-3 rounded-xl shadow">
+                    <p class="text-gray-600">Estás pidiendo para la:</p>
+                    <h2 id="menu-table-number" class="text-3xl font-bold brand-orange"></h2>
+                </div>
+                <div class="flex items-center mb-6">
+                    <h2 class="text-2xl font-bold brand-brown">Elige tus Sabores</h2>
+                </div>
+                <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Menu items will be inserted here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Page: Add Item -->
+            <div id="page-add-item" class="page hidden">
+                <button id="back-to-menu-from-add" class="text-gray-600 hover:text-brand-orange mb-4"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+                <h2 class="text-2xl font-bold brand-brown mb-4">Añadir al Pedido</h2>
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <img id="add-item-image" src="" alt="Producto seleccionado" class="w-full h-48 object-contain">
+                    <div class="p-6">
+                        <h3 id="add-item-name" class="text-xl font-bold brand-brown"></h3>
+                        <p id="add-item-desc" class="text-gray-600 text-sm mb-4"></p>
+                        
+                        <div class="flex justify-between items-center mb-6">
+                            <span class="font-semibold">Cantidad</span>
+                            <div class="flex items-center border rounded-lg">
+                                <button id="quantity-minus" class="px-3 py-1 text-lg">-</button>
+                                <input id="add-item-quantity" type="text" value="1" class="w-12 text-center font-bold" readonly>
+                                <button id="quantity-plus" class="px-3 py-1 text-lg">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button id="add-to-cart-button" class="w-full bg-brand-orange text-white font-bold py-3 px-6 rounded-full mt-6 hover:bg-brand-orange-dark transition-colors">
+                    <i class="fas fa-plus mr-2"></i> Agregar al Pedido
+                </button>
+            </div>
+
+            <!-- Page: Cart/Summary -->
+            <div id="page-summary" class="page hidden">
+                 <button id="back-to-menu-from-summary" class="text-gray-600 hover:text-brand-orange mb-4"><i class="fas fa-arrow-left mr-2"></i> Agregar más sabores</button>
+                <h2 class="text-2xl font-bold brand-brown mb-4">Tu Pedido</h2>
+                <div id="summary-items-list" class="bg-white p-6 rounded-2xl shadow-lg space-y-4">
+                    <!-- Summary items will be listed here -->
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-lg mt-4">
+                    <div class="mb-4">
+                        <label for="customer-name" class="block text-left text-sm font-semibold mb-1">Tu Nombre</label>
+                        <input type="text" id="customer-name" class="w-full border-2 border-gray-200 p-2 rounded-lg focus:border-brand-orange focus:ring-brand-orange" placeholder="Ingresa un nombre para el pedido">
+                    </div>
+                    <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                        <span class="text-sm font-semibold">Número de Mesa</span>
+                        <span id="table-number-display" class="font-bold brand-orange text-lg"></span>
+                    </div>
+                     <div class="border-t mt-4 pt-4 flex justify-between font-bold text-lg">
+                        <span>Total</span>
+                        <span id="summary-total-price" class="brand-orange"></span>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-4">Por favor, confirma tu pedido. Nuestro equipo lo preparará al momento.</p>
+                <button id="place-order" class="w-full bg-brand-brown text-white font-bold py-3 px-6 rounded-full mt-6 hover:bg-brand-brown-dark transition-colors">
+                    <i class="fas fa-check mr-2"></i> Realizar Pedido
+                </button>
+            </div>
+
+            <!-- Page: Order Confirmed -->
+            <div id="page-confirmation" class="page hidden text-center">
+                 <div id="confirmation-message-container">
+                    <div class="bg-white p-8 rounded-2xl shadow-lg">
+                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-check text-4xl text-green-600"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold brand-brown mb-2">¡Pedido Confirmado!</h2>
+                        <p class="text-gray-600 mb-4">Gracias por tu pedido, <span id="confirm-customer-name" class="font-semibold"></span>. Tu pedido está en camino.</p>
+                    </div>
+                    <button id="play-game-button" class="w-full bg-brand-orange text-white font-bold py-3 px-6 rounded-full mt-6 hover:bg-brand-orange-dark transition-colors">
+                        <i class="fas fa-gamepad mr-2"></i> Juega Choco-Cabalgata mientras esperas
+                    </button>
+                 </div>
+
+                 <div id="game-container" class="hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <button id="exit-game-button" class="text-gray-600 hover:text-brand-orange"><i class="fas fa-arrow-left mr-2"></i> Volver</button>
+                        <div class="text-lg font-bold brand-brown">Puntaje: <span id="score">0</span></div>
+                    </div>
+                    <canvas id="game-canvas"></canvas>
+                    <p class="text-center text-sm text-gray-500 mt-2">Toca la pantalla para saltar</p>
+                 </div>
+                 <button id="new-order" class="w-full border-2 border-brand-orange brand-orange font-bold py-3 px-6 rounded-full mt-6 hover:bg-orange-100 transition-colors">Hacer un Nuevo Pedido</button>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="text-center py-4 mt-8">
+            <p class="text-xs text-gray-400">&copy; 2024 VALÚ Chocobananas Fresh Desserts</p>
+        </footer>
+    </div>
+    
+    <!-- Floating Cart Button -->
+    <button id="cart-button" class="bg-brand-brown text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-brand-brown-dark transition-colors hidden">
+        <i class="fas fa-shopping-cart mr-2"></i> Ver Pedido (<span id="cart-count">0</span>)
+    </button>
+    
+    <!-- Generic Alert Modal -->
+    <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-lg w-11/12 max-w-sm text-center">
+            <h2 id="alert-title" class="text-xl font-bold brand-brown mb-2"></h2>
+            <p id="alert-message" class="text-gray-600 mb-6"></p>
+            <button id="alert-close" class="w-full bg-brand-orange text-white font-bold py-2 px-4 rounded-full hover:bg-brand-orange-dark transition-colors">Aceptar</button>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DATA ---
+            const menuItems = [
+                { id: 1, name: "Crujiente de Maní", desc: "La combinación perfecta de chocolate cremoso y maní tostado.", price: 1.00, image: "https://i.postimg.cc/wBJcZcY3/1000670551-removebg-preview.webp" },
+                { id: 2, name: "Fiesta de Chispas", desc: "Bañada en chocolate y cubierta con una explosión de grageas de colores.", price: 1.00, image: "https://i.postimg.cc/Kz2r2kmf/1000670552-removebg-preview.webp" },
+                { id: 3, name: "Sueño Blanco", desc: "Delicado chocolate blanco con chispas de chocolate oscuro.", price: 1.00, image: "https://i.postimg.cc/Hkrt41Sw/1000670553-removebg-preview.webp" },
+                { id: 4, name: "Galleta Manía", desc: "Tu galleta favorita triturada sobre una capa de chocolate.", price: 1.00, image: "https://i.postimg.cc/vBrgL0FL/1000670549-removebg-preview-1.webp" },
+                { id: 5, name: "Choco-Chispas", desc: "Para los verdaderos amantes del chocolate. ¡Doble dosis de sabor!", price: 1.00, image: "https://i.postimg.cc/BnRBm7yd/1000670554-removebg-preview.webp" },
+                { id: 6, name: "Nieve de Coco", desc: "Un viaje tropical con cada mordida. Bañada en chocolate y coco fresco.", price: 1.00, image: "https://i.postimg.cc/76n1YH6k/1000670555-removebg-preview.webp" },
+                { id: 7, name: "Corazón de Amor", desc: "El clásico de chocolate con un toque especial de amor. ¡Ideal para compartir!", price: 1.00, image: "https://i.postimg.cc/j2qHDpwJ/1000670557-removebg-preview.webp" },
+                { id: 8, name: "Doble Chocolate", desc: "Base de chocolate oscuro con un elegante decorado de chocolate blanco.", price: 1.00, image: "https://i.postimg.cc/VL69mcPx/IMG-20250809-165122-573-2-removebg-preview.webp" },
+                { id: 9, name: "Explosión Crujiente", desc: "Una capa de chocolate cubierta con arroz inflado achocolatado.", price: 1.00, image: "https://i.postimg.cc/nrdvB3BS/1000670562-removebg-preview.webp" },
+                { id: 10, name: "Fresa Pasión", desc: "Una dulce cobertura de chocolate con un toque de fresa y decoraciones.", price: 1.00, image: "https://i.postimg.cc/rygGBw3G/IMG-20250809-170227-751-2-removebg-preview.webp" },
+                { id: 11, name: "Almendra Tostada", desc: "Chocolate premium cubierto con trocitos de almendra tostada.", price: 1.00, image: "https://i.postimg.cc/VLVqNHYd/IMG-20250809-171929-053-2-removebg-preview.webp" }
+            ];
+            
+            const progressSteps = [
+                { id: 'scan', icon: 'fa-qrcode' },
+                { id: 'menu', icon: 'fa-ice-cream' },
+                { id: 'summary', icon: 'fa-check' }
+            ];
+
+            // --- STATE ---
+            let order = {
+                table: null,
+                cart: [],
+                customerName: ''
+            };
+            let currentItemForAdding = null;
+
+            // --- UI ELEMENTS ---
+            const pages = document.querySelectorAll('.page');
+            const menuGrid = document.getElementById('menu-grid');
+            const progressBar = document.getElementById('progress-bar');
+            const alertModal = document.getElementById('alert-modal');
+            const cartButton = document.getElementById('cart-button');
+            const cartCountSpan = document.getElementById('cart-count');
+            
+            // --- MAIN APP FUNCTIONS ---
+
+            function init() {
+                const params = new URLSearchParams(window.location.search);
+                order.table = params.get('table');
+                renderProgressBar();
+                if (order.table) {
+                    document.getElementById('menu-table-number').innerText = `Mesa #${order.table}`;
+                    populateMenu();
+                    showPage('menu');
+                } else {
+                    showPage('scan');
+                }
+                setupEventListeners();
+                updateCartButton();
+            }
+            
+            function renderProgressBar() {
+                progressBar.innerHTML = '';
+                const relevantSteps = progressSteps.filter(s => s.id !== 'scan');
+                relevantSteps.forEach((step, index) => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.id = `step-${step.id}`;
+                    stepDiv.className = 'progress-step';
+                    stepDiv.innerHTML = `<i class="fas ${step.icon}"></i>`;
+                    progressBar.appendChild(stepDiv);
+                    if (index < relevantSteps.length - 1) {
+                        const lineDiv = document.createElement('div');
+                        lineDiv.id = `line-${step.id}`;
+                        lineDiv.className = 'progress-line';
+                        progressBar.appendChild(lineDiv);
+                    }
+                });
+            }
+
+            function updateProgressBar(currentPageId) {
+                const menuStep = document.getElementById('step-menu');
+                const summaryStep = document.getElementById('step-summary');
+                const line = document.getElementById('line-menu');
+
+                if (currentPageId === 'menu' || currentPageId === 'add-item') {
+                    menuStep.classList.add('active');
+                    menuStep.classList.remove('completed');
+                    summaryStep.classList.remove('active', 'completed');
+                    line.classList.remove('active');
+                } else if (currentPageId === 'summary') {
+                    menuStep.classList.add('completed');
+                    menuStep.classList.remove('active');
+                    summaryStep.classList.add('active');
+                    line.classList.add('active');
+                }
+            }
+
+            function showPage(pageId) {
+                pages.forEach(page => page.classList.add('hidden'));
+                document.getElementById(`page-${pageId}`).classList.remove('hidden');
+                
+                cartButton.classList.toggle('hidden', pageId !== 'menu');
+
+                if (pageId === 'scan' || pageId === 'confirmation') {
+                    progressBar.classList.add('hidden');
+                } else {
+                    progressBar.classList.remove('hidden');
+                    updateProgressBar(pageId);
+                }
+            }
+
+            function populateMenu() {
+                menuGrid.innerHTML = '';
+                menuItems.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-4 rounded-2xl shadow-lg flex items-center gap-4 cursor-pointer hover:shadow-xl transition-shadow';
+                    card.dataset.itemId = item.id;
+                    card.innerHTML = `
+                        <div class="w-16 h-16 flex-shrink-0">
+                            <img src="${item.image}" alt="${item.name}" class="w-full h-full object-contain">
+                        </div>
+                        <div class="flex-grow">
+                            <h3 class="font-bold brand-brown">${item.name}</h3>
+                            <p class="text-xs text-gray-500">${item.desc}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-300"></i>
+                    `;
+                    card.addEventListener('click', () => handleMenuItemSelect(item.id));
+                    menuGrid.appendChild(card);
+                });
+            }
+            
+            function showAlert(title, message) {
+                document.getElementById('alert-title').innerText = title;
+                document.getElementById('alert-message').innerText = message;
+                alertModal.classList.remove('hidden');
+            }
+
+            function handleMenuItemSelect(itemId) {
+                currentItemForAdding = { ...menuItems.find(i => i.id === itemId), quantity: 1 };
+                updateAddItemPage();
+                showPage('add-item');
+            }
+
+            function updateAddItemPage() {
+                if (!currentItemForAdding) return;
+                document.getElementById('add-item-image').src = currentItemForAdding.image;
+                document.getElementById('add-item-name').innerText = currentItemForAdding.name;
+                document.getElementById('add-item-desc').innerText = currentItemForAdding.desc;
+                document.getElementById('add-item-quantity').value = currentItemForAdding.quantity;
+            }
+
+            function handleAddItemToCart() {
+                const existingItem = order.cart.find(item => item.id === currentItemForAdding.id);
+                if (existingItem) {
+                    existingItem.quantity += currentItemForAdding.quantity;
+                } else {
+                    order.cart.push(currentItemForAdding);
+                }
+                updateCartButton();
+                showPage('menu');
+            }
+
+            function updateCartButton() {
+                const totalItems = order.cart.reduce((sum, item) => sum + item.quantity, 0);
+                cartCountSpan.innerText = totalItems;
+                cartButton.classList.toggle('hidden', totalItems === 0 || !['menu', 'add-item'].includes(getCurrentPage()));
+            }
+            
+            function getCurrentPage() {
+                const visiblePage = [...pages].find(p => !p.classList.contains('hidden'));
+                return visiblePage ? visiblePage.id.replace('page-', '') : null;
+            }
+
+            function updateSummaryPage() {
+                const list = document.getElementById('summary-items-list');
+                const totalDisplay = document.getElementById('summary-total-price');
+                list.innerHTML = '';
+                let total = 0;
+
+                if (order.cart.length === 0) {
+                    list.innerHTML = '<p class="text-center text-gray-500">Tu pedido está vacío.</p>';
+                    totalDisplay.innerText = '$0.00';
+                    document.getElementById('place-order').disabled = true;
+                    return;
+                }
+
+                document.getElementById('place-order').disabled = false;
+                order.cart.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    total += itemTotal;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex items-center justify-between border-b pb-2';
+                    itemDiv.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <img src="${item.image}" class="w-12 h-12 object-contain rounded-md">
+                            <div>
+                                <p class="font-semibold">${item.name}</p>
+                                <p class="text-xs text-gray-500">${item.quantity} x $${item.price.toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold">$${itemTotal.toFixed(2)}</span>
+                            <button data-item-id="${item.id}" class="remove-item-btn text-red-500 hover:text-red-700">&times;</button>
+                        </div>
+                    `;
+                    list.appendChild(itemDiv);
+                });
+
+                totalDisplay.innerText = `$${total.toFixed(2)}`;
+                document.getElementById('table-number-display').innerText = `#${order.table}`;
+                
+                document.querySelectorAll('.remove-item-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const itemIdToRemove = parseInt(e.target.dataset.itemId, 10);
+                        order.cart = order.cart.filter(item => item.id !== itemIdToRemove);
+                        updateSummaryPage();
+                        updateCartButton();
+                    });
+                });
+            }
+
+            async function sendOrder() {
+                order.customerName = document.getElementById('customer-name').value.trim();
+                if (!order.customerName) {
+                    showAlert('Falta tu nombre', 'Por favor, ingresa un nombre para el pedido.');
+                    return;
+                }
+                
+                const placeOrderButton = document.getElementById('place-order');
+                placeOrderButton.disabled = true;
+                placeOrderButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
+
+                const total = order.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const orderData = {
+                    table: order.table,
+                    customer: order.customerName,
+                    items: order.cart.map(item => ({ flavor: item.name, quantity: item.quantity, price: item.price })),
+                    total: total,
+                    timestamp: new Date().toISOString()
+                };
+
+                try {
+                    const webhookUrl = 'https://maxlagartilloia.app.n8n.cloud/webhook/6eec2b5b-60a9-40d5-a0a1-ec85cef09c1d';
+                    const response = await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(orderData),
+                    });
+                    
+                    if (!response.ok) throw new Error(`Webhook failed with status: ${response.status}`);
+                    
+                    document.getElementById('confirm-customer-name').innerText = order.customerName;
+                    showPage('confirmation');
+
+                } catch (error) {
+                    console.error("Detailed Fetch Error: ", error);
+                    showAlert('Error de Conexión', 'No se pudo enviar el pedido al área de despacho. Por favor, avisa al personal.');
+                } finally {
+                    placeOrderButton.disabled = false;
+                    placeOrderButton.innerHTML = '<i class="fas fa-check mr-2"></i> Realizar Pedido';
+                }
+            }
+
+            function setupEventListeners() {
+                document.getElementById('alert-close').addEventListener('click', () => alertModal.classList.add('hidden'));
+                document.getElementById('back-to-menu-from-add').addEventListener('click', () => showPage('menu'));
+                document.getElementById('add-to-cart-button').addEventListener('click', handleAddItemToCart);
+                cartButton.addEventListener('click', () => { updateSummaryPage(); showPage('summary'); });
+                document.getElementById('back-to-menu-from-summary').addEventListener('click', () => showPage('menu'));
+                document.getElementById('place-order').addEventListener('click', sendOrder);
+                document.getElementById('new-order').addEventListener('click', () => {
+                    order.cart = [];
+                    order.customerName = '';
+                    document.getElementById('customer-name').value = '';
+                    updateCartButton();
+                    showPage('menu');
+                });
+                document.getElementById('quantity-minus').addEventListener('click', () => {
+                    if (currentItemForAdding.quantity > 1) {
+                        currentItemForAdding.quantity--;
+                        document.getElementById('add-item-quantity').value = currentItemForAdding.quantity;
+                    }
+                });
+                document.getElementById('quantity-plus').addEventListener('click', () => {
+                    currentItemForAdding.quantity++;
+                    document.getElementById('add-item-quantity').value = currentItemForAdding.quantity;
+                });
+                
+                // Game Listeners
+                document.getElementById('play-game-button').addEventListener('click', startGame);
+                document.getElementById('exit-game-button').addEventListener('click', exitGame);
+            }
+
+            init();
+
+            // --- CHOCO-CABALGATA GAME LOGIC ---
+            const canvas = document.getElementById('game-canvas');
+            const ctx = canvas.getContext('2d');
+            const scoreElement = document.getElementById('score');
+            
+            let gameLoopId;
+            let score = 0;
+            let obstacles = [];
+            let frame = 0;
+            let gameSpeed = 3;
+            let isGameOver = false;
+
+            const player = {
+                x: 50,
+                y: 0, 
+                width: 60,
+                height: 80,
+                velocityY: 0,
+                gravity: 0.5,
+                jumpPower: -12,
+                isJumping: false,
+                draw() {
+                    ctx.drawImage(playerImage, this.x, this.y, this.width, this.height);
+                }
+            };
+            
+            const playerImage = new Image();
+            playerImage.src = 'https://i.postimg.cc/vBrgL0FL/1000670549-removebg-preview-1.webp'; // Player chocobanana
+            
+            // ** NEW: Array of obstacle images **
+            const obstacleImages = [];
+            const obstacleImageSources = menuItems.map(item => item.image);
+            obstacleImageSources.forEach(src => {
+                const img = new Image();
+                img.src = src;
+                obstacleImages.push(img);
+            });
+
+            function resizeCanvas() {
+                const container = canvas.parentElement;
+                canvas.width = container.clientWidth;
+                canvas.height = 250; 
+                player.y = canvas.height - player.height - 20; // Ground level
+            }
+
+            function generateObstacle() {
+                const height = 40 + Math.random() * 40;
+                const randomImage = obstacleImages[Math.floor(Math.random() * obstacleImages.length)];
+                obstacles.push({
+                    x: canvas.width,
+                    y: canvas.height - height - 20,
+                    width: 30,
+                    height: height,
+                    image: randomImage
+                });
+            }
+
+            function updateGame() {
+                if (isGameOver) return;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw ground
+                ctx.fillStyle = '#6B4F43';
+                ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+                // Player logic
+                if (player.isJumping) {
+                    player.velocityY += player.gravity;
+                    player.y += player.velocityY;
+                }
+                if (player.y > canvas.height - player.height - 20) {
+                    player.y = canvas.height - player.height - 20;
+                    player.isJumping = false;
+                    player.velocityY = 0;
+                }
+                player.draw();
+
+                // Obstacle logic
+                if (frame % 100 === 0) { 
+                    generateObstacle();
+                }
+
+                obstacles.forEach((obs, index) => {
+                    obs.x -= gameSpeed;
+                    ctx.drawImage(obs.image, obs.x, obs.y, obs.width, obs.height);
+
+                    // ** NEW: Tighter collision detection **
+                    const padding = 5; // Small buffer to make collision feel more fair
+                    const playerHitbox = { x: player.x + padding, y: player.y + padding, width: player.width - 2 * padding, height: player.height - 2 * padding };
+                    const obsHitbox = { x: obs.x, y: obs.y, width: obs.width, height: obs.height };
+
+                    if (playerHitbox.x < obsHitbox.x + obsHitbox.width &&
+                        playerHitbox.x + playerHitbox.width > obsHitbox.x &&
+                        playerHitbox.y < obsHitbox.y + obsHitbox.height &&
+                        playerHitbox.y + playerHitbox.height > obsHitbox.y) {
+                        
+                        isGameOver = true;
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = 'white';
+                        ctx.font = '30px Poppins';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('¡Perdiste!', canvas.width / 2, canvas.height / 2 - 20);
+                        ctx.font = '16px Poppins';
+                        ctx.fillText('Toca para reiniciar', canvas.width / 2, canvas.height / 2 + 20);
+                    }
+
+                    if (obs.x + obs.width < 0) {
+                        obstacles.splice(index, 1);
+                        score++;
+                        scoreElement.innerText = score;
+                        gameSpeed += 0.1; // Increase speed
+                    }
+                });
+
+                frame++;
+                gameLoopId = requestAnimationFrame(updateGame);
+            }
+            
+            function playerJump() {
+                if (!player.isJumping && !isGameOver) {
+                    player.isJumping = true;
+                    player.velocityY = player.jumpPower;
+                } else if (isGameOver) {
+                    // Restart game
+                    isGameOver = false;
+                    score = 0;
+                    gameSpeed = 3;
+                    obstacles = [];
+                    frame = 0;
+                    scoreElement.innerText = score;
+                    player.y = canvas.height - player.height - 20;
+                    updateGame();
+                }
+            }
+
+            function setupGameControls() {
+                canvas.addEventListener('click', playerJump);
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        playerJump();
+                    }
+                });
+            }
+            
+            function removeGameControls() {
+                 canvas.removeEventListener('click', playerJump);
+            }
+
+            function startGame() {
+                document.getElementById('confirmation-message-container').classList.add('hidden');
+                document.getElementById('game-container').classList.remove('hidden');
+                resizeCanvas();
+                setupGameControls();
+                isGameOver = true; 
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Poppins';
+                ctx.textAlign = 'center';
+                ctx.fillText('Choco-Cabalgata', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.font = '16px Poppins';
+                ctx.fillText('Toca para empezar a jugar', canvas.width / 2, canvas.height / 2 + 20);
+            }
+
+            function exitGame() {
+                cancelAnimationFrame(gameLoopId);
+                removeGameControls();
+                document.getElementById('game-container').classList.add('hidden');
+                document.getElementById('confirmation-message-container').classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
